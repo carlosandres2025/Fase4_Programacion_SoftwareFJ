@@ -1,0 +1,9 @@
+# Archivos de respaldo personal y documentos para el foro (no se suben a GitHub)
+respaldo_completo_software_fj.py
+Anexo 3 - Problema a desarrollar Fase 4.pdf
+PLANIFICACION_SISTEMA_FASE4.md
+Planificacion_Sistema_Fase4.pdf
+
+# Archivos temporales de Python
+__pycache__/
+*.pyc
