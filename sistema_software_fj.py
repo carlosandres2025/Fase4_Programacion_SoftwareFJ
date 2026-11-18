@@ -469,9 +469,245 @@ class AsesoriaEspecializada(Servicio):
 # ==============================================================================
 # MODULO 4 - ESTUDIANTE 4: CLASE RESERVA Y GESTOR CENTRAL EN MEMORIA
 # ==============================================================================
-# Espacio reservado para el Estudiante 4:
-# - Crear clase Reserva(EntidadSistema) con confirmar_reserva(), procesar_reserva() y cancelar_reserva()
-# - Crear clase SistemaSoftwareFJ con las listas internas (clientes, servicios, reservas)
+# =====================================================
+# Curso: Programacion (213023) - UNAD
+# Fase 4 - Ejercicio 1: Sistema Integral de Gestion de Clientes, Servicios y Reservas
+# Empresa: Software FJ
+# Jazmin Adamary Rativa Moreno 
+class Reserva(EntidadSistema):
+    """
+    Clase que representa una reserva en el sistema Software FJ.
+    Integra un Cliente, un Servicio, la duración en horas, el estado y el costo final.
+    """
+
+    def __init__(self, id_entidad: str, cliente, servicio, duracion_horas: float):
+        super().__init__(id_entidad)
+
+        if cliente is None or not isinstance(cliente, Cliente):
+            raise DatosInvalidosError("Debe asociar una instancia válida de Cliente a la reserva.")
+        if servicio is None or not isinstance(servicio, Servicio):
+            raise DatosInvalidosError("Debe asociar una instancia válida de Servicio a la reserva.")
+
+        try:
+            duracion = float(duracion_horas)
+        except (TypeError, ValueError) as e:
+            raise DatosInvalidosError("La duración en horas debe ser un valor numérico válido.") from e
+
+        if duracion <= 0:
+            raise DatosInvalidosError("La duración de la reserva debe ser mayor a cero horas.")
+
+        # Atributos privados según el diagrama UML
+        self.__cliente = cliente
+        self.__servicio = servicio
+        self.__duracion_horas = duracion
+        self.__estado = "PENDIENTE"
+        self.__costo_final = 0.0
+
+        self.validar_datos()
+        GestorLogs.registrar("INFO", f"Reserva '{self._id_entidad}' creada en estado PENDIENTE para el cliente '{self.__cliente.nombre}'.")
+
+    # Propiedades de solo lectura para mantener encapsulación
+    @property
+    def cliente(self):
+        return self.__cliente
+
+    @property
+    def servicio(self):
+        return self.__servicio
+
+    @property
+    def duracion_horas(self):
+        return self.__duracion_horas
+
+    @property
+    def estado(self):
+        return self.__estado
+
+    @property
+    def costo_final(self):
+        return self.__costo_final
+
+    def validar_datos(self) -> bool:
+        """Valida que los datos internos de la reserva sean consistentes."""
+        if self.__duracion_horas <= 0:
+            raise DatosInvalidosError("La duración en horas debe ser mayor a cero.")
+        if self.__estado not in ["PENDIENTE", "CONFIRMADA", "PROCESADA", "CANCELADA"]:
+            raise DatosInvalidosError(f"Estado de reserva inválido: {self.__estado}")
+        return True
+
+    def confirmar_reserva(self):
+        """
+        Confirma una reserva pendiente verificando que el servicio esté disponible.
+        """
+        if self.__estado != "PENDIENTE":
+            raise OperacionNoPermitidaError(
+                f"No se puede confirmar la reserva '{self._id_entidad}' porque su estado actual es '{self.__estado}'."
+            )
+
+        if not self.__servicio.disponible:
+            raise ServicioNoDisponibleError(
+                f"El servicio '{self.__servicio.nombre_servicio}' (ID: {self.__servicio.id_entidad}) no está disponible."
+            )
+
+        self.__estado = "CONFIRMADA"
+        self.__servicio.disponible = False
+        GestorLogs.registrar("INFO", f"Reserva '{self._id_entidad}' CONFIRMADA. Servicio '{self.__servicio.id_entidad}' bloqueado.")
+
+    def procesar_reserva(self, iva: float = 0.19, descuento: float = 0.0) -> float:
+        """
+        Procesa una reserva confirmada calculando su costo final con IVA y descuento opcionales.
+        Implementa encadenamiento de excepciones y bloque try/except/else.
+        """
+        if self.__estado != "CONFIRMADA":
+            raise OperacionNoPermitidaError(
+                f"Solo se pueden procesar reservas en estado 'CONFIRMADA'. Estado actual: '{self.__estado}'."
+            )
+
+        try:
+            costo_calculado = self.__servicio.calcular_costo_total(
+                duracion_horas=self.__duracion_horas,
+                impuesto_iva=iva,
+                descuento_pct=descuento
+            )
+        except SoftwareFJError as e:
+            GestorLogs.registrar("ERROR", f"Fallo al procesar reserva '{self._id_entidad}': {e}")
+            raise CalculoInconsistenteError(
+                f"No fue posible calcular el costo final de la reserva '{self._id_entidad}'."
+            ) from e
+        else:
+            self.__costo_final = costo_calculado
+            self.__estado = "PROCESADA"
+            self.__servicio.disponible = True  # Libera el servicio tras finalizar el proceso
+            GestorLogs.registrar(
+                "INFO",
+                f"Reserva '{self._id_entidad}' PROCESADA exitosamente. Costo final: ${self.__costo_final:.2f}"
+            )
+            return self.__costo_final
+
+    def cancelar_reserva(self, motivo: str):
+        """
+        Cancela una reserva si aún no ha sido procesada ni cancelada previamente.
+        """
+        if not motivo or not str(motivo).strip():
+            raise ParametroFaltanteError("Debe indicar un motivo válido para cancelar la reserva.")
+
+        if self.__estado in ["PROCESADA", "CANCELADA"]:
+            raise OperacionNoPermitidaError(
+                f"No se puede cancelar la reserva '{self._id_entidad}' porque ya está '{self.__estado}'."
+            )
+
+        estado_anterior = self.__estado
+        self.__estado = "CANCELADA"
+
+        # Si estaba confirmada, devolvemos la disponibilidad al servicio
+        if estado_anterior == "CONFIRMADA":
+            self.__servicio.disponible = True
+
+        GestorLogs.registrar(
+            "INFO",
+            f"Reserva '{self._id_entidad}' CANCELADA. Motivo: {str(motivo).strip()}"
+        )
+
+    def mostrar_resumen(self) -> str:
+        """Devuelve un resumen detallado del estado actual de la reserva."""
+        return (
+            f"[Reserva ID: {self._id_entidad}] Cliente: {self.__cliente.nombre} | "
+            f"Servicio: {self.__servicio.nombre_servicio} ({self.__servicio.id_entidad}) | "
+            f"Duración: {self.__duracion_horas}h | Estado: {self.__estado} | "
+            f"Costo Final: ${self.__costo_final:.2f}"
+        )
+
+
+class SistemaSoftwareFJ:
+    """
+    Gestor central en memoria que administra las listas internas de clientes,
+    servicios y reservas sin utilizar bases de datos.
+    """
+
+    def __init__(self):
+        self.__clientes = []
+        self.__servicios = []
+        self.__reservas = []
+        GestorLogs.registrar("INFO", "SistemaSoftwareFJ inicializado en memoria correctamente.")
+
+    # Propiedades para consultar copias seguras de las listas internas
+    @property
+    def clientes(self):
+        return list(self.__clientes)
+
+    @property
+    def servicios(self):
+        return list(self.__servicios)
+
+    @property
+    def reservas(self):
+        return list(self.__reservas)
+
+    # --- Gestión de Clientes ---
+    def registrar_cliente(self, cliente) -> bool:
+        try:
+            if not isinstance(cliente, Cliente):
+                raise DatosInvalidosError("El objeto proporcionado no corresponde a un Cliente válido.")
+            if any(c.id_entidad == cliente.id_entidad or c.documento == cliente.documento for c in self.__clientes):
+                raise OperacionNoPermitidaError(
+                    f"Ya existe un cliente registrado con ID '{cliente.id_entidad}' o documento '{cliente.documento}'."
+                )
+            cliente.validar_datos()
+        except SoftwareFJError as e:
+            GestorLogs.registrar("ERROR", f"Error al registrar cliente: {e}")
+            raise
+        else:
+            self.__clientes.append(cliente)
+            GestorLogs.registrar("INFO", f"Cliente '{cliente.nombre}' (ID: {cliente.id_entidad}) registrado en el sistema.")
+            return True
+
+    def buscar_cliente(self, id_cliente: str):
+        for cliente in self.__clientes:
+            if cliente.id_entidad == str(id_cliente).strip():
+                return cliente
+        raise ParametroFaltanteError(f"No se encontró ningún cliente con ID '{id_cliente}'.")
+
+    # --- Gestión de Servicios ---
+    def registrar_servicio(self, servicio) -> bool:
+        try:
+            if not isinstance(servicio, Servicio):
+                raise DatosInvalidosError("El objeto proporcionado no corresponde a un Servicio válido.")
+            if any(s.id_entidad == servicio.id_entidad for s in self.__servicios):
+                raise OperacionNoPermitidaError(
+                    f"Ya existe un servicio registrado con ID '{servicio.id_entidad}'."
+                )
+            servicio.validar_datos()
+        except SoftwareFJError as e:
+            GestorLogs.registrar("ERROR", f"Error al registrar servicio: {e}")
+            raise
+        else:
+            self.__servicios.append(servicio)
+            GestorLogs.registrar("INFO", f"Servicio '{servicio.nombre_servicio}' (ID: {servicio.id_entidad}) registrado en el sistema.")
+            return True
+
+    def buscar_servicio(self, id_servicio: str):
+        for servicio in self.__servicios:
+            if servicio.id_entidad == str(id_servicio).strip():
+                return servicio
+        raise ParametroFaltanteError(f"No se encontró ningún servicio con ID '{id_servicio}'.")
+
+    # --- Gestión de Reservas ---
+    def crear_reserva(self, id_reserva: str, id_cliente: str, id_servicio: str, duracion_horas: float) -> Reserva:
+        try:
+            if any(r.id_entidad == str(id_reserva).strip() for r in self.__reservas):
+                raise OperacionNoPermitidaError(f"Ya existe una reserva con ID '{id_reserva}'.")
+
+            cliente = self.buscar_cliente(id_cliente)
+            servicio = self.buscar_servicio(id_servicio)
+
+            if not servicio.disponible:
+                raise ServicioNoDisponibleError(
+                    f"El servicio '{servicio.nombre_servicio}' (ID: {servicio.id_entidad}) no está disponible para reservar."
+                )
+
+            nueva_reserva = Reserva(id_reserva, cliente, servicio, duracion_horas)
+        except SoftwareFJError as e:
+
 
 
 # ==============================================================================
