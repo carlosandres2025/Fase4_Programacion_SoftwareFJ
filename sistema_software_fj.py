@@ -109,11 +109,217 @@ class EntidadSistema(ABC):
 # ==============================================================================
 # MODULO 2 - ESTUDIANTE 2: CLASE CLIENTE CON ENCAPSULACION Y VALIDACIONES
 # ==============================================================================
-# Espacio reservado para el Estudiante 2:
-# - Crear clase Cliente(EntidadSistema)
-# - Definir atributos privados: __documento, __nombre, __correo, __telefono
-# - Implementar @property y @setter con validaciones (ParametroFaltanteError y DatosInvalidosError)
-# - Implementar validar_datos() y mostrar_resumen()
+class Cliente(EntidadSistema):
+    
+    """
+    Clase que representa a un cliente dentro del sistema Software FJ.
+    Hereda de la clase abstracta EntidadSistema y aplica encapsulación estricta
+    mediante atributos privados (__), propiedades (@property/@setter) y
+    manejo de excepciones personalizadas.
+    """
+
+    def __init__(
+        self,
+        id_cliente: str,
+        documento: str,
+        nombre: str,
+        correo: str,
+        telefono: str,
+    ):
+        """
+        Constructor de la clase Cliente.
+        Inicializa los atributos heredados y los atributos propios del cliente
+        pasando cada dato por su respectivo setter para garantizar la validación.
+        """
+        # Invoca el constructor de la clase padre (EntidadSistema) para asignar el ID y la fecha de registro
+        super().__init__(id_cliente)
+
+        # Asigna el documento invocando al método setter @documento.setter (ejecuta validación)
+        self.documento = documento
+
+        # Asigna el nombre invocando al método setter @nombre.setter (ejecuta validación)
+        self.nombre = nombre
+
+        # Asigna el correo invocando al método setter @correo.setter (ejecuta validación)
+        self.correo = correo
+
+        # Asigna el teléfono invocando al método setter @telefono.setter (ejecuta validación)
+        self.telefono = telefono
+
+        # Ejecuta una validación integral final para asegurar que toda la entidad sea consistente
+        self.validar_datos()
+
+    # --------------------------------------------------------------------------
+    # PROPIEDADES Y SETTERS (Encapsulación y Validación de Datos)
+    # --------------------------------------------------------------------------
+
+    @property
+    def documento(self) -> str:
+        """Método getter que permite leer de forma segura el atributo privado __documento."""
+        # Retorna el valor almacenado en el atributo privado __documento
+        return self.__documento
+
+    @documento.setter
+    def documento(self, valor: str) -> None:
+        """Método setter que valida y modifica el atributo privado __documento."""
+        # Verifica si el valor es nulo (None) o si al quitarle espacios queda una cadena vacía
+        if not valor or not str(valor).strip():
+            # Lanza la excepción personalizada ParametroFaltanteError si el dato está vacío
+            raise ParametroFaltanteError(
+                "El documento del cliente es obligatorio."
+            )
+
+        # Convierte el valor a cadena de texto y elimina espacios en blanco al inicio y al final
+        valor_limpio = str(valor).strip()
+
+        # Verifica si todos los caracteres de la cadena son dígitos numéricos (0-9)
+        if not valor_limpio.isdigit():
+            # Lanza DatosInvalidosError si el documento contiene letras, símbolos o espacios internos
+            raise DatosInvalidosError(
+                f"El documento '{valor_limpio}' debe contener solo caracteres numéricos."
+            )
+
+        # Si supera todas las validaciones, guarda el dato limpio en el atributo privado __documento
+        self.__documento = valor_limpio
+
+    @property
+    def nombre(self) -> str:
+        """Método getter que permite leer de forma segura el atributo privado __nombre."""
+        # Retorna el valor almacenado en el atributo privado __nombre
+        return self.__nombre
+
+    @nombre.setter
+    def nombre(self, valor: str) -> None:
+        """Método setter que valida y modifica el atributo privado __nombre."""
+        # Comprueba que el nombre recibido no sea nulo ni una cadena compuesta solo por espacios
+        if not valor or not str(valor).strip():
+            # Lanza ParametroFaltanteError indicando que el campo nombre es requerido
+            raise ParametroFaltanteError("El nombre del cliente es obligatorio.")
+
+        # Limpia los espacios sobrantes en los extremos del nombre recibido
+        valor_limpio = str(valor).strip()
+
+        # Comprueba que el nombre tenga una longitud mínima razonable (al menos 3 caracteres)
+        if len(valor_limpio) < 3:
+            # Lanza DatosInvalidosError si el nombre es demasiado corto
+            raise DatosInvalidosError(
+                "El nombre del cliente debe tener al menos 3 caracteres."
+            )
+
+        # Almacena el nombre validado en el atributo privado __nombre
+        self.__nombre = valor_limpio
+
+    @property
+    def correo(self) -> str:
+        """Método getter que permite leer de forma segura el atributo privado __correo."""
+        # Retorna el valor almacenado en el atributo privado __correo
+        return self.__correo
+
+    @correo.setter
+    def correo(self, valor: str) -> None:
+        """Método setter que valida y modifica el atributo privado __correo."""
+        # Verifica que el correo no sea None y que no esté vacío tras eliminar espacios
+        if not valor or not str(valor).strip():
+            # Lanza ParametroFaltanteError si no se proporcionó un correo electrónico
+            raise ParametroFaltanteError("El correo electrónico es obligatorio.")
+
+        # Elimina espacios en blanco innecesarios al inicio y final del correo
+        valor_limpio = str(valor).strip()
+
+        # Valida que exista el símbolo '@' y que después del '@' exista al menos un punto '.' para el dominio
+        if "@" not in valor_limpio or "." not in valor_limpio.split("@")[-1]:
+            # Lanza DatosInvalidosError si el correo no cumple con la estructura básica usuario@dominio.ext
+            raise DatosInvalidosError(
+                f"El correo '{valor_limpio}' no tiene un formato válido (debe incluir '@' y dominio)."
+            )
+
+        # Guarda el correo electrónico validado en el atributo privado __correo
+        self.__correo = valor_limpio
+
+    @property
+    def telefono(self) -> str:
+        """Método getter que permite leer de forma segura el atributo privado __telefono."""
+        # Retorna el valor almacenado en el atributo privado __telefono
+        return self.__telefono
+
+    @telefono.setter
+    def telefono(self, valor: str) -> None:
+        """Método setter que valida y modifica el atributo privado __telefono."""
+        # Comprueba que el teléfono no sea nulo ni esté compuesto únicamente de espacios
+        if not valor or not str(valor).strip():
+            # Lanza ParametroFaltanteError si el teléfono viene vacío
+            raise ParametroFaltanteError(
+                "El teléfono del cliente es obligatorio."
+            )
+
+        # Convierte a texto y limpia espacios en los extremos
+        valor_limpio = str(valor).strip()
+
+        # Valida que el número telefónico contenga exclusivamente dígitos numéricos
+        if not valor_limpio.isdigit():
+            # Lanza DatosInvalidosError si contiene letras, guiones o caracteres especiales
+            raise DatosInvalidosError(
+                f"El teléfono '{valor_limpio}' debe contener solo caracteres numéricos."
+            )
+
+        # Asigna el teléfono validado al atributo privado __telefono
+        self.__telefono = valor_limpio
+
+    # --------------------------------------------------------------------------
+    # IMPLEMENTACIÓN DE MÉTODOS ABSTRACTOS (Polimorfismo desde EntidadSistema)
+    # --------------------------------------------------------------------------
+
+    def validar_datos(self) -> bool:
+        """
+        Implementación obligatoria del método abstracto validar_datos() de EntidadSistema.
+        Verifica de manera integral que todos los atributos del cliente existan y sean válidos.
+        """
+        # Inicia bloque try para capturar y gestionar cualquier falla durante la verificación
+        try:
+            # Verifica que el atributo protegido _id_entidad (heredado) no esté vacío
+            if not self._id_entidad or not str(self._id_entidad).strip():
+                # Lanza ParametroFaltanteError si falta el identificador único del cliente
+                raise ParametroFaltanteError(
+                    "El ID del cliente no puede estar vacío."
+                )
+
+            # Comprueba que los cuatro atributos privados tengan valores asignados y no vacíos
+            if not (
+                self.__documento
+                and self.__nombre
+                and self.__correo
+                and self.__telefono
+            ):
+                # Lanza ParametroFaltanteError si alguno de los atributos privados está incompleto
+                raise ParametroFaltanteError(
+                    "Faltan datos obligatorios en el perfil del cliente."
+                )
+
+            # Si todas las comprobaciones son exitosas, retorna True indicando validez
+            return True
+
+        # Captura cualquier excepción ocurrida dentro del bloque try
+        except Exception as error_origen:
+            # Si la excepción ya es una de las excepciones personalizadas esperadas, la relanza tal cual
+            if isinstance(
+                error_origen, (ParametroFaltanteError, DatosInvalidosError)
+            ):
+                raise
+            # Si ocurre un error no previsto (ej. AttributeError), aplica encadenamiento de excepciones
+            raise DatosInvalidosError(
+                "Error inesperado al validar los datos del cliente."
+            ) from error_origen
+
+    def mostrar_resumen(self) -> str:
+        """
+        Implementación obligatoria del método abstracto mostrar_resumen() de EntidadSistema.
+        Construye y retorna una cadena de texto legible con los datos principales del cliente.
+        """
+        # Formatea y retorna los atributos heredados (_id_entidad, _fecha_registro) y los privados (__nombre, etc.)
+        return (
+            f"[Cliente ID: {self._id_entidad} | Registro: {self._fecha_registro}] "
+
+
 
 
 # ==============================================================================
