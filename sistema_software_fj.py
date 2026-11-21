@@ -713,8 +713,172 @@ class SistemaSoftwareFJ:
 # ==============================================================================
 # MODULO 5 - ESTUDIANTE 5: SIMULACION SECUENCIAL DE LAS 10 OPERACIONES Y REPORTE
 # ==============================================================================
-# Espacio reservado para el Estudiante 5:
-# - Implementar funcion ejecutar_simulacion() con las 10 operaciones de prueba (validas y fallidas)
+#def ejecutar_simulacion():
+    """
+    Ejecuta de forma secuencial las 10 operaciones de prueba (casos válidos
+    y errores controlados) para verificar la estabilidad del sistema Software FJ.
+    """
+    print("\n" + "=" * 75)
+    print("INICIO DE SIMULACIÓN - SISTEMA INTEGRAL SOFTWARE FJ (10 OPERACIONES)")
+    print("=" * 75)
+
+    sistema = SistemaSoftwareFJ()
+    cliente_ana = None
+    cliente_carlos = None
+    sala_juntas = None
+    alquiler_portatiles = None
+    asesoria_dev = None
+    reserva_sala_ana = None
+    reserva_portatiles_carlos = None
+    reserva_asesoria_error = None
+
+    # 1. Registro válido de clientes: Ana Gómez y Carlos Pérez
+    print("\n--- Operación 1: Registro válido de clientes (Ana Gómez y Carlos Pérez) ---")
+    try:
+        cliente_ana = Cliente("CLI-001", "1010203040", "Ana Gómez", "ana.gomez@softwarefj.com", "3001112233")
+        cliente_carlos = Cliente("CLI-002", "1020304050", "Carlos Pérez", "carlos.perez@softwarefj.com", "3004445566")
+        sistema.registrar_cliente(cliente_ana)
+        sistema.registrar_cliente(cliente_carlos)
+        print("[OK] Clientes Ana Gómez y Carlos Pérez registrados correctamente.")
+    except SoftwareFJError as e:
+        print(f"[ERROR INESPERADO] {e}")
+
+    # 2. Error controlado en cliente (correo sin '@') -> DatosInvalidosError
+    print("\n--- Operación 2: Error controlado en cliente (correo sin '@') ---")
+    try:
+        cliente_mal_correo = Cliente("CLI-003", "1030405060", "Luis Torres", "correo_invalido.com", "3007778899")
+        sistema.registrar_cliente(cliente_mal_correo)
+    except DatosInvalidosError as e:
+        GestorLogs.registrar("ERROR", f"Op. 2 controlada (DatosInvalidosError): {e}")
+        print(f"[OK - CAPTURADO DatosInvalidosError] {e}")
+    except SoftwareFJError as e:
+        print(f"[ERROR] Excepción distinta a la esperada: {e}")
+
+    # 3. Error controlado en cliente (documento en blanco) -> ParametroFaltanteError
+    print("\n--- Operación 3: Error controlado en cliente (documento en blanco) ---")
+    try:
+        cliente_sin_doc = Cliente("CLI-004", "   ", "Sofía Ruiz", "sofia.ruiz@softwarefj.com", "3009990011")
+        sistema.registrar_cliente(cliente_sin_doc)
+    except ParametroFaltanteError as e:
+        GestorLogs.registrar("ERROR", f"Op. 3 controlada (ParametroFaltanteError): {e}")
+        print(f"[OK - CAPTURADO ParametroFaltanteError] {e}")
+    except SoftwareFJError as e:
+        print(f"[ERROR] Excepción distinta a la esperada: {e}")
+
+    # 4. Creación válida de servicios: sala de juntas, alquiler de portátiles y asesoría de desarrollo
+    print("\n--- Operación 4: Creación válida de servicios ---")
+    try:
+        sala_juntas = ReservaSala("SRV-SALA-1", tarifa_base_hora=80.0, capacidad_personas=12, incluye_multimedia=True)
+        alquiler_portatiles = AlquilerEquipo("SRV-EQ-1", tarifa_base_hora=25.0, tipo_equipo="Portátiles", cantidad_unidades=4, incluye_seguro=True)
+        asesoria_dev = AsesoriaEspecializada("SRV-ASE-1", tarifa_base_hora=100.0, area_tematica="Desarrollo", nivel_experto="SENIOR")
+        sistema.registrar_servicio(sala_juntas)
+        sistema.registrar_servicio(alquiler_portatiles)
+        sistema.registrar_servicio(asesoria_dev)
+        print("[OK] Servicios (Sala de juntas, Alquiler de portátiles y Asesoría de desarrollo) registrados.")
+    except SoftwareFJError as e:
+        print(f"[ERROR INESPERADO] {e}")
+
+    # 5. Error controlado en servicio: sala con capacidad de -10 personas
+    print("\n--- Operación 5: Error controlado en servicio (capacidad -10 personas) ---")
+    try:
+        sala_invalida = ReservaSala("SRV-SALA-ERR", tarifa_base_hora=80.0, capacidad_personas=-10, incluye_multimedia=False)
+        sistema.registrar_servicio(sala_invalida)
+    except DatosInvalidosError as e:
+        GestorLogs.registrar("ERROR", f"Op. 5 controlada (DatosInvalidosError): {e}")
+        print(f"[OK - CAPTURADO DatosInvalidosError] {e}")
+    except SoftwareFJError as e:
+        print(f"[ERROR] Excepción distinta a la esperada: {e}")
+
+    # 6. Reserva exitosa (costo básico): sala de juntas para Ana Gómez por 3 horas sin impuestos ni descuentos
+    print("\n--- Operación 6: Reserva exitosa (costo básico - Ana Gómez, 3h) ---")
+    try:
+        reserva_sala_ana = sistema.crear_reserva("RES-001", "CLI-001", "SRV-SALA-1", 3.0)
+        reserva_sala_ana.confirmar_reserva()
+        costo_basico = reserva_sala_ana.procesar_reserva(iva=0.0, descuento=0.0)
+        print(f"[OK] Reserva confirmada y procesada. Costo total (sin IVA ni descuento): ${costo_basico:.2f}")
+    except SoftwareFJError as e:
+        print(f"[ERROR INESPERADO] {e}")
+
+    # 7. Error por servicio ocupado: intentar reservar la misma sala de juntas para Carlos Pérez
+    print("\n--- Operación 7: Error por servicio ocupado (Carlos Pérez -> misma sala) ---")
+    try:
+        # Bloqueamos temporalmente la disponibilidad para simular que sigue ocupada tras la Op. 6
+        sala_juntas.disponible = False
+        reserva_duplicada = sistema.crear_reserva("RES-002", "CLI-002", "SRV-SALA-1", 2.0)
+        reserva_duplicada.confirmar_reserva()
+    except ServicioNoDisponibleError as e:
+        GestorLogs.registrar("ERROR", f"Op. 7 controlada (ServicioNoDisponibleError): {e}")
+        print(f"[OK - CAPTURADO ServicioNoDisponibleError] {e}")
+    except SoftwareFJError as e:
+        print(f"[ERROR] Excepción distinta a la esperada: {e}")
+
+    # 8. Reserva exitosa con sobrecarga (IVA 19% y descuento 10%): portátiles para Carlos Pérez
+    print("\n--- Operación 8: Reserva exitosa con sobrecarga (IVA 19%, Desc. 10% - Carlos Pérez) ---")
+    try:
+        reserva_portatiles_carlos = sistema.crear_reserva("RES-003", "CLI-002", "SRV-EQ-1", 4.0)
+        reserva_portatiles_carlos.confirmar_reserva()
+        costo_con_sobrecarga = reserva_portatiles_carlos.procesar_reserva(iva=0.19, descuento=0.10)
+        print(f"[OK] Reserva de portátiles procesada con IVA 19% y descuento 10%. Total: ${costo_con_sobrecarga:.2f}")
+    except SoftwareFJError as e:
+        print(f"[ERROR INESPERADO] {e}")
+
+    # 9. Error en cálculo de costos (encadenamiento): asesoría con descuento inválido (150% -> 1.50)
+    print("\n--- Operación 9: Error en cálculo de costos (descuento 150% / 1.50) ---")
+    try:
+        reserva_asesoria_error = sistema.crear_reserva("RES-004", "CLI-001", "SRV-ASE-1", 2.0)
+        reserva_asesoria_error.confirmar_reserva()
+        reserva_asesoria_error.procesar_reserva(iva=0.19, descuento=1.50)
+    except CalculoInconsistenteError as e:
+        causa = e.__cause__
+        GestorLogs.registrar("ERROR", f"Op. 9 controlada (CalculoInconsistenteError): {e} | Causa: {causa}")
+        print(f"[OK - CAPTURADO CalculoInconsistenteError] {e}")
+        if causa is not None:
+            print(f"    Causa encadenada (__cause__): {type(causa).__name__}: {causa}")
+    except SoftwareFJError as e:
+        print(f"[ERROR] Excepción distinta a la esperada: {e}")
+
+    # 10. Cancelación y validación de estado: cancelar reserva activa y luego intentar cancelarla de nuevo
+    print("\n--- Operación 10: Cancelación y validación de estado (doble cancelación) ---")
+    reserva_cancelable = None
+    try:
+        reserva_cancelable = sistema.crear_reserva("RES-005", "CLI-002", "SRV-ASE-1", 1.5)
+        reserva_cancelable.confirmar_reserva()
+        reserva_cancelable.cancelar_reserva("Cambio de agenda del cliente")
+        print("[OK] Primera cancelación realizada con éxito.")
+    except SoftwareFJError as e:
+        print(f"[ERROR INESPERADO] {e}")
+
+    try:
+        if reserva_cancelable is not None:
+            reserva_cancelable.cancelar_reserva("Intento de segunda cancelación")
+    except OperacionNoPermitidaError as e:
+        GestorLogs.registrar("ERROR", f"Op. 10 controlada (OperacionNoPermitidaError): {e}")
+        print(f"[OK - CAPTURADO OperacionNoPermitidaError] {e}")
+    except SoftwareFJError as e:
+        print(f"[ERROR] Excepción distinta a la esperada: {e}")
+
+    # Resumen final en consola
+    print("\n" + "=" * 75)
+    print("RESUMEN FINAL DEL SISTEMA EN MEMORIA")
+    print("=" * 75)
+    print(f"Total clientes registrados: {len(sistema.clientes)}")
+    for c in sistema.clientes:
+        print(f"  - ID: {c.id_entidad} | Nombre: {c.nombre} | Correo: {c.correo}")
+
+    print(f"\nTotal servicios registrados: {len(sistema.servicios)}")
+    for s in sistema.servicios:
+        print(f"  - {s.mostrar_resumen()} | Disponible: {s.disponible}")
+
+    print(f"\nTotal reservas creadas: {len(sistema.reservas)}")
+    for r in sistema.reservas:
+        print(f"  - {r.mostrar_resumen()}")
+
+    print(f"\nHistorial de eventos y errores guardado en: '{GestorLogs.ARCHIVO_LOG}'")
+    print("=" * 75)
+
+
+if __name__ == "__main__":
+    ejecutar_simulacion()
 
 
 if __name__ == "__main__":
