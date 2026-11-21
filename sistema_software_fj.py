@@ -316,8 +316,11 @@ class Cliente(EntidadSistema):
         Construye y retorna una cadena de texto legible con los datos principales del cliente.
         """
         # Formatea y retorna los atributos heredados (_id_entidad, _fecha_registro) y los privados (__nombre, etc.)
-        return (
-            f"[Cliente ID: {self._id_entidad} | Registro: {self._fecha_registro}] "
+     return (
+         f"[Cliente ID: {self._id_entidad} | Registro: {self._fecha_registro}] "
+         f"Nombre: {self.__nombre} | Doc: {self.__documento} | "
+         f"Correo: {self.__correo} | Tel: {self.__telefono}"
+     )
 
 
 
@@ -410,6 +413,8 @@ class ReservaSala(Servicio):
             costo += 15.0 * duracion_horas  # Recargo fijo por hora si incluye multimedia
         return costo
 
+    def describir_servicio(self) -> str:
+        return self.mostrar_resumen()
 
 class AlquilerEquipo(Servicio):
     """Clase derivada para el alquiler de equipos tecnológicos."""
@@ -438,7 +443,8 @@ class AlquilerEquipo(Servicio):
         if self._incluye_seguro:
             costo_total *= 1.08  # Incremento del 8% si incluye seguro contra daños
         return costo_total
-
+    def describir_servicio(self) -> str:
+        return self.mostrar_resumen()
 
 class AsesoriaEspecializada(Servicio):
     """Clase derivada para asesorías técnicas especializadas (Junior / Senior)."""
@@ -464,7 +470,8 @@ class AsesoriaEspecializada(Servicio):
         if self._nivel_experto == "SENIOR":
             tarifa_efectiva *= 1.5  # Factor multiplicador de 1.5x para consultores Senior
         return tarifa_efectiva * duracion_horas
-
+    def describir_servicio(self) -> str:
+        return self.mostrar_resumen()
 
 # ==============================================================================
 # MODULO 4 - ESTUDIANTE 4: CLASE RESERVA Y GESTOR CENTRAL EN MEMORIA
@@ -707,13 +714,19 @@ class SistemaSoftwareFJ:
 
             nueva_reserva = Reserva(id_reserva, cliente, servicio, duracion_horas)
         except SoftwareFJError as e:
+            GestorLogs.registrar("ERROR", f"Error al crear reserva '{id_reserva}': {e}")
+            raise
+        else:
+            self.__reservas.append(nueva_reserva)
+            GestorLogs.registrar("INFO", f"Reserva '{id_reserva}' registrada en memoria.")
+            return nueva_reserva
 
 
 
 # ==============================================================================
 # MODULO 5 - ESTUDIANTE 5: SIMULACION SECUENCIAL DE LAS 10 OPERACIONES Y REPORTE
 # ==============================================================================
-#def ejecutar_simulacion():
+def ejecutar_simulacion():
     """
     Ejecuta de forma secuencial las 10 operaciones de prueba (casos válidos
     y errores controlados) para verificar la estabilidad del sistema Software FJ.
@@ -881,7 +894,6 @@ if __name__ == "__main__":
     ejecutar_simulacion()
 
 
-if __name__ == "__main__":
     # Prueba inicial de verificacion del Modulo 1
     print("=== Verificacion inicial del Modulo 1 (Excepciones, Logs y EntidadSistema) ===")
     GestorLogs.registrar("INFO", "Prueba inicial del Modulo 1 ejecutada correctamente.")
